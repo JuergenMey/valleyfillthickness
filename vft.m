@@ -4,7 +4,7 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 %
 % Mey, J., D. Scherler, G. Zeilinger, and M. R. Strecker (2015), Estimating
 % the fill thickness and bedrock topography in intermontane valleys using
-% artificial neural networks, J. Geophys. Res.  Earth Surf., 120, 1–20,
+% artificial neural networks, J. Geophys. Res.  Earth Surf., 120, 1ï¿½20,
 % doi:10.1002/2014JF003270.
 %
 % This code uses MATLAB's Parallel Computing Toolbox and requires the 
@@ -79,23 +79,20 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 % Deposits in Yosemite Valley, California (NPS, GRD, GRE, YOSE), Lakewood, CO.
 % 
 % Gutenberg, B., J. P. Buwalda, and R. P. Sharp (1956), Seismic explorations on 
-% the floor of Yosemite Valley, California, Bull. Geol. Soc. Am., 67, 1051–1078.
+% the floor of Yosemite Valley, California, Bull. Geol. Soc. Am., 67, 1051ï¿½1078.
 %
 %
 % Tested with MATLAB 2012b
-% Author: Jürgen Mey (mey[at]geo.uni-potsdam.de)
+% Author: Jï¿½rgen Mey (mey[at]geo.uni-potsdam.de)
 % Date: 03. January, 2016
 
 % close any existing parallel sessions
-try
- matlabpool close
-catch nopoolopen
-end
+delete(gcp('nocreate'))
  
 % open matlabpool for parallel computing
 try
-    matlabpool('open',feature('numCores'));
-catch noPCT
+    parpool('local',feature('numCores'));
+catch 
     disp('Parallel Computing Toolbox is not installed. Running code in serial mode...')
 end
 
@@ -121,14 +118,14 @@ defaultpath = 'out';
 
 addRequired(p,'DEM',@(x)isa(x,'GRIDobj'));
 addRequired(p,'MASK',@(x)isa(x,'GRIDobj'));
-addParamValue(p,'input',defaultInput,...
+addParameter(p,'input',defaultInput,...
     @(x) any(validatestring(x,expectedInput)));
-addParamValue(p,'fraction',defaultFraction,@isnumeric);
-addParamValue(p,'sectors',defaultSectors,@isnumeric);
-addParamValue(p,'nodes',defaultNodes,@isnumeric);
-addParamValue(p,'buffer',defaultBuffer,@isnumeric);
-addParamValue(p,'iterations',defaultIterations,@isnumeric);
-addParamValue(p,'path',defaultpath);
+addParameter(p,'fraction',defaultFraction,@isnumeric);
+addParameter(p,'sectors',defaultSectors,@isnumeric);
+addParameter(p,'nodes',defaultNodes,@isnumeric);
+addParameter(p,'buffer',defaultBuffer,@isnumeric);
+addParameter(p,'iterations',defaultIterations,@isnumeric);
+addParameter(p,'path',defaultpath);
                  
 parse(p,DEM,MASK,varargin{:});
 
@@ -168,8 +165,9 @@ numnet              = 3;        % number of networks to train, network with lowe
 minsector           = 1;        % minimum number of sectors
 minnodes            = 1;        % minimum number of hidden nodes
 %% PREPROCESSING
-
+MASK.Z(isnan(MASK.Z)) = 0;
 DEMc = DEM;MASKc=MASK;
+
 
 %slope mask
 slope = gradient8(DEMc,'deg');
@@ -297,15 +295,15 @@ parfor testnum = nrun
                     end
                 end
                 Target_Train(n,1) = ntarget;
-            catch error1                                                 % a cell that does not "see" a side wall in any direction
-                Storage_Train(n,:) = 0;                                  % will cause an error and gets excluded from the training data set
+            catch                                                           % a cell that does not "see" a side wall in any direction
+                Storage_Train(n,:) = 0;                                     % will cause an error and gets excluded from the training data set
                 Target_Train(n,1) = 0;
             end
         end
         
         nn = find(Storage_Train(:,1) == 0);
         Target_Train = Target_Train(any(Storage_Train,2),:);
-        Storage_Train = Storage_Train(any(Storage_Train,2),:);           % delete zero-rows
+        Storage_Train = Storage_Train(any(Storage_Train,2),:);              % delete zero-rows
         
         % Include x-y-coordinates into training input
         if addinput == 2 || addinput == 3
@@ -320,7 +318,7 @@ parfor testnum = nrun
         
         % normalisation
         Distance_train_norm = [];
-        for col = 1 : size(Distance_train{nsector,testnum},2);
+        for col = 1 : size(Distance_train{nsector,testnum},2)
             mean_Distance_train = mean(Distance_train{nsector,testnum}(:,col));
             std_Distance_train = std(Distance_train{nsector,testnum}(:,col));
             Distance_train_norm(:,col) = (Distance_train{nsector,testnum}(:,col) - mean_Distance_train) / std_Distance_train;
@@ -330,7 +328,7 @@ parfor testnum = nrun
         Thickness_train_norm = (Target_train{nsector,testnum} - mean_Thickness_train) / std_Thickness_train;
         
         % VALIDATION
-        if validate == 1;
+        if validate == 1
             Storage_Val = zeros(vexamples,nsector+addinput);            % Distances are stored here and
             Target_Val = zeros(vexamples,1);                            % corresponding target thicknesses here
 %             disp('validation cells')
@@ -357,14 +355,14 @@ parfor testnum = nrun
                         end
                     end
                     Target_Val(n,1) = ntarget;
-                catch error1                                            % a cell that does not "see" a side wall in any direction
-                    Storage_Val(n,:) = 0;                               % will cause an error and gets excluded from the training data set
+                catch                                                       % a cell that does not "see" a side wall in any direction
+                    Storage_Val(n,:) = 0;                                   % will cause an error and gets excluded from the training data set
                     Target_Val(n,1) = 0;
                 end
             end
             nn = find(Target_Val==0);
             Target_Val = Target_Val(any(Storage_Val,2),:);
-            Storage_Val = Storage_Val(any(Storage_Val,2),:);            % delete zero-rows
+            Storage_Val = Storage_Val(any(Storage_Val,2),:);                % delete zero-rows
             
             % Include x-y-coordinates as training inputs
             if addinput == 2 || addinput == 3
@@ -476,7 +474,7 @@ end
 %normalization
 Distance_test_norm = zeros(size(Distance_test));
 for testnum = nrun
-    for col = 1 : size(Distance_test,2);
+    for col = 1 : size(Distance_test,2)
         mean_Distance_train = mean(Distance_train{nsector,testnum}(:,col));
         std_Distance_train = std(Distance_train{nsector,testnum}(:,col));
         Distance_test_norm(:,col) = (Distance_test(:,col) - mean_Distance_train) / std_Distance_train;
