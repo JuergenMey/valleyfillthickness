@@ -42,8 +42,8 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 % fraction    Number of training cells in relation to number of fill cells,
 %             has a large impact on the computing time, (default: 0.1)
 %             
-% sectors     Maximum number of directional sectors (default: 10)
-% nodes       Maximum number of hidden nodes (default: 10)
+% sectors     Range of directional sectors (default: [1 10])
+% nodes       Range of hidden nodes (default: [1 10])
 % buffer      Maximum distance between training cells and valley fill in
 %             meters (default: 2000)
 % iterations  Network learning cycles (default: 1000)
@@ -61,14 +61,14 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 %
 % H = vft(DEM,MASK)
 % H = vft(DEM,MASK,'fraction',0.5)
-% [H,Z,E,STD] = vft(DEM,MASK,'input','coordinates','nodes',20,'buffer',1000)
+% [H,Z,E,STD] = vft(DEM,MASK,'input','coordinates','nodes',[1 20],'buffer',1000)
 %
 % EXAMPLE 
 %
 % DEM = GRIDobj('yosemite_valley.tif'); % ASTER GDEM
 % MASK = GRIDobj('fillmask.tif');  % from NPS GRI [2006]
 % 
-% [H,Z,E,STD] = vft(DEM,MASK,'path','fill','fraction',0.01,'sectors',5,'nodes',5,'buffer',1000);
+% [H,Z,E,STD] = vft(DEM,MASK,'path','fill','fraction',0.01,'sectors',[1 5],'nodes',[1 5],'buffer',1000);
 % imageschs(DEM);figure;imageschs(Z)
 % % compare with independent estimates from Gutenberg et al. [1956], Fig.10
 % D = GRIDobj('depthtobedrock.tif');
@@ -101,17 +101,17 @@ narginchk(2,16)
 
 % only want 12 optional inputs at most
 numvarargs = length(varargin);
-if numvarargs > 14
+if numvarargs > 16
     error('vft:TooManyInputs', ...
-        'requires at most 7 optional inputs');
+        'requires at most 8 optional inputs');
 end
 
 p = inputParser;
 defaultInput = 'distance';
 expectedInput = {'distance','elevation','coordinates','elevation+coordinates','path'};
 defaultFraction = 0.1;
-defaultSectors = 10;
-defaultNodes = 10;
+defaultSectors = [1 10];
+defaultNodes = [1 10];
 defaultBuffer = 2000;
 defaultIterations = 1000;
 defaultpath = 'out';
@@ -142,8 +142,10 @@ end
 
 fexamples = p.Results.fraction;
 train_buffer = p.Results.buffer;
-maxsector = p.Results.sectors;
-maxnodes = p.Results.nodes;
+maxsector = max(p.Results.sectors);
+maxnodes = max(p.Results.nodes);
+minsector = min(p.Results.sectors);
+minnodes = min(p.Results.nodes);
 niterations = p.Results.iterations;
 outdirection = p.Results.path;
 
@@ -162,8 +164,6 @@ threshold           = 1;        % to adjust sampling of training thicknesses
 % Network parameters
 valexamples         = fexamples;    % fraction of potential training cells used for validation, (valexamples + maxexamples <= 1)
 numnet              = 3;            % number of networks to train, network with lowest training error is selected for prediction
-minsector           = 1;            % minimum number of sectors
-minnodes            = 1;            % minimum number of hidden nodes
 %% PREPROCESSING
 MASK.Z(isnan(MASK.Z)) = 0;
 DEMc = DEM;MASKc=MASK;
@@ -416,11 +416,12 @@ parfor testnum = nrun
     end
 end
 
+save([num2str(outdirection),'./temp1.mat']); % save intermediate workspace
 %%  PREDICTION
 
 % find network configuration that performed best on the validation data set
 mRESULTSv = mean(RESULTSv(:,:,3,:),4);
-[nnodes,nsector] = find(mRESULTSv == min(mRESULTSv(:)));
+[nnodes,nsector] = find(mRESULTSv == min(mRESULTSv(mRESULTSv~=0)));
 
 % input generation
 [nrows,ncols] = size(MASKc.Z);
