@@ -17,7 +17,7 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 %
 % SYNTAX
 %
-% [H,Z,E,STD] = vft(DEM,MASK,input,fraction,sectors,nodes,buffer,iterations)
+% [H,Z,E,STD] = vft(DEM,MASK,input,fraction,sectors,nodes,buffer,iterations,path)
 %
 % DESCRIPTION
 %
@@ -82,9 +82,9 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 % the floor of Yosemite Valley, California, Bull. Geol. Soc. Am., 67, 1051ï¿½1078.
 %
 %
-% Tested with MATLAB 2012b
-% Author: Jï¿½rgen Mey (mey[at]geo.uni-potsdam.de)
-% Date: 03. January, 2016
+% Tested with MATLAB R2017a
+% Author: Jürgen Mey (juemey@uni-potsdam.de)
+% Date: 18. November, 2020
 
 % close any existing parallel sessions
 delete(gcp('nocreate'))
