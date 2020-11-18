@@ -160,10 +160,10 @@ threshold           = 1;        % to adjust sampling of training thicknesses
 
 
 % Network parameters
-valexamples         = fexamples;      % fraction of potential training cells used for validation, (valexamples + maxexamples <= 1)
-numnet              = 3;        % number of networks to train, network with lowest training error is selected for prediction
-minsector           = 1;        % minimum number of sectors
-minnodes            = 1;        % minimum number of hidden nodes
+valexamples         = fexamples;    % fraction of potential training cells used for validation, (valexamples + maxexamples <= 1)
+numnet              = 3;            % number of networks to train, network with lowest training error is selected for prediction
+minsector           = 1;            % minimum number of sectors
+minnodes            = 1;            % minimum number of hidden nodes
 %% PREPROCESSING
 MASK.Z(isnan(MASK.Z)) = 0;
 DEMc = DEM;MASKc=MASK;
@@ -188,7 +188,7 @@ Ridges = bwareaopen(Ridges,15);
 
 %prepare Train_data and mask_test
 Train_data = DEMc.Z;
-ica = find(MASKc.Z == 1);      % find cells belonging to the valley-fill
+ica = find(MASKc.Z == 1);       % find cells belonging to the valley-fill
 Train_catch = Train_data;
 Train_data(slope.Z < 10) = 0;   % exclude flat areas from training data
 Train_data(MASKc.Z == 1) = 0;
@@ -227,7 +227,6 @@ parfor testnum = nrun
     % calculate the maximum possible training thickness for each element of y
     disp('compute range of possible training thicknesses')
     for n = 1 : texamples
-        %disp(['compute range of possible training thicknesses ' num2str(n/texamples) '/1 complete'])
         nridge = Ridges;
         nridge(DEMcZ <= Train_data(y(n))) = 0;
         [~,IDX]=bwdist(nridge);
@@ -253,11 +252,10 @@ parfor testnum = nrun
         % calculate the maximum possible validation thickness for each element of z
         disp('compute range of possible validation thicknesses')
         for n = 1 : vexamples
-            %disp(['compute range of possible validation thicknesses ' num2str(n/vexamples) '/1 complete'])
             nridge = Ridges;
             nridge(DEMcZ <= Train_data(z(n))) = 0;
             [~,IDX]=bwdist(nridge);
-            nrange =  DEMcZ(IDX(z(n))) - Train_data(z(n));                  % elevation range
+            nrange =  DEMcZ(IDX(z(n))) - Train_data(z(n));              % elevation range
             nrange_cratev(n,1) = nrange;
         end
         
@@ -268,12 +266,9 @@ parfor testnum = nrun
     end
     disp('compute distances for training/validation')
     for nsector = minsector : maxsector
-%         disp(['compute distances for train/validation ' num2str(nsector)])
         Storage_Train = zeros(texamples,nsector+addinput);              % Distances will be stored here and
         Target_Train = zeros(texamples,1);                              % corresponding thicknesses here
-%         disp('training cells')
         for n = 1 : texamples
-%             disp(['training cells ' num2str(n/texamples) '/1 complete'])
             ntarget = randsample(1:nrange_crate(id(n)),1);              % randomly sample 1 out of elevation range and
             train_elevation = Train_data(y(id(n))) + ntarget;           % add it to the training cell elevation to construct a training fill(=target)
             mask_train = zeros(size(Train_data));
@@ -331,9 +326,7 @@ parfor testnum = nrun
         if validate == 1
             Storage_Val = zeros(vexamples,nsector+addinput);            % Distances are stored here and
             Target_Val = zeros(vexamples,1);                            % corresponding target thicknesses here
-%             disp('validation cells')
             for n = 1:vexamples
-%                 disp(['validation cells ' num2str(n/vexamples) '/1 complete'])
                 ntarget = randsample(1:nrange_cratev(ik(n)),1);         % randomly sample 1 out of elevation range and
                 train_elevation = Train_datav(z(ik(n))) + ntarget;      % add it to the train data elevation to construct a training fill(=target)
                 mask_vald = zeros(size(Train_datav));
@@ -380,7 +373,7 @@ parfor testnum = nrun
             
             % normalisation
             Distance_Val_norm = zeros(size(Storage_Val));
-            for col = 1 : size(Distance_val{nsector,testnum},2);
+            for col = 1 : size(Distance_val{nsector,testnum},2)
                 mean_Distance_train = mean(Distance_train{nsector,testnum}(:,col));
                 std_Distance_train = std(Distance_train{nsector,testnum}(:,col));
                 Distance_Val_norm(:,col) = (Distance_val{nsector,testnum}(:,col) - mean_Distance_train) / std_Distance_train;
@@ -423,7 +416,6 @@ parfor testnum = nrun
     end
 end
 
-% save([num2str(outdirection),'./temp1.mat']); % save intermediate workspace
 %%  PREDICTION
 
 % find network configuration that performed best on the validation data set
@@ -455,7 +447,6 @@ parfor i = 1 : size(nrow,1)
     end
 end
 
-% save([num2str(outdirection),'./temp2.mat']); % save intermediate workspace
 
 dt = find(StorageFill(:,1)~=0);
 Distance_test = StorageFill(any(StorageFill,2),:);              % delete zero-rows
@@ -535,31 +526,7 @@ mThickness = MASKc;
 mThickness.Z = meanT;
 
 close all
-
-% plot results
-% h = figure;
-% subplot(2,2,1)
-% imagesc(mThickness.Z)
-% colorbar
-% title(['Mean thickness ',num2str(nsector),'-',num2str(nnodes)])
-% subplot(2,2,2)
-% imagesc(stdT)
-% colorbar
-% title('Standard deviation')
-% subplot(2,2,3)
-% imagesc(mRESULTSv)
-% colorbar
-% title('Validation error')
-% subplot(2,2,4)
-% imagesc(Depth_corr.Z)
-% colorbar
-% title('Thickness corrected')
-
 totaltime = toc/3600;                                               % total processing time in hours
-% save(['.\',num2str(outdirection),'\varout.mat'],'-v7.3')                    % save workspace
-% saveas(h,['.\',num2str(outdirection),'\Thickness_',num2str(nsector),'-',num2str(nnodes)],'fig') % save figures
-% runfile = mfilename;                                                % save current file to out folder
-% copyfile(['.\',num2str(runfile),'.m'],['.\',num2str(outdirection)]) % save running code
 
 % write geotiffs
 GRIDobj2geotiff(Bed_corr,['.\',num2str(outdirection),'\Bedrock.tif']);
