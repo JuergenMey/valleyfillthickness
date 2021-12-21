@@ -55,7 +55,8 @@ function [H,varargout] = vft(DEM,MASK,varargin)
 %     Z       Map of bedrock elevations (class: GRIDobj)
 %     E       Validation error as a function of the network configuration
 %     STD     Map of the standard deviation determined from all parallel runs
-%               
+%     NET     The trained network(s) that can be applied to other fillmasks 
+%             without retraining.           
 %
 % USAGE
 %
@@ -537,3 +538,4 @@ H = Depth_corr;
 varargout{1} = Bed_corr;
 varargout{2} = mRESULTSv;
 varargout{3} = stdT;
+varargout{4} = NET;
