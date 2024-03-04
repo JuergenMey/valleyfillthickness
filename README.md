@@ -2,8 +2,9 @@ This matlab code uses a 2-layer feed forward neural network to estimate valley f
 
 Setup:
 1. Download/clone the content of the repository
-2. Add netlab to your Matlab path.
-3. Run the example.
+2. Download/clone/add to matlab path --> Topotoolbox.
+3. Add netlab to your Matlab path.
+4. Run the example.
 
    DEM = GRIDobj('yosemite_valley.tif'); % ASTER GDEM
 
